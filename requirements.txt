@@ -1,0 +1,4 @@
+pandas==2.0.3
+python-telegram-bot==20.4
+requests==2.28.2
+configparser==6.0.0

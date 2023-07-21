@@ -1,0 +1,7 @@
+*.pyc
+__pycache__/
+\.vscode/
+.env
+*.ini
+.DS_Store
+workspace.code-workspace
