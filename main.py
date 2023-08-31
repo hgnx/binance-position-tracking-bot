@@ -86,34 +86,41 @@ def send_current_positions(position_result, nickname):
             telegram_send_message(message)
 
 while True:
-    for TARGETED_ACCOUNT_UID in TARGETED_ACCOUNT_UIDs:
-        ACCOUNT_INFO_URL            = ACCOUNT_INFO_URL_TEMPLATE.format(TARGETED_ACCOUNT_UID)
-        headers                     = get_header(ACCOUNT_INFO_URL)
-        json_data                   = get_json(TARGETED_ACCOUNT_UID)
+    try:
+        for TARGETED_ACCOUNT_UID in TARGETED_ACCOUNT_UIDs:
+            ACCOUNT_INFO_URL        = ACCOUNT_INFO_URL_TEMPLATE.format(TARGETED_ACCOUNT_UID)
+            headers                 = get_header(ACCOUNT_INFO_URL)
+            json_data               = get_json(TARGETED_ACCOUNT_UID)
 
-        response_nickname           = get_nickname(headers, json_data)
-        response                    = get_position(headers, json_data)
-        if response is not None and response_nickname is not None:
-            nickname                = json.loads(response_nickname.text)['data']['nickName']
-            leaderboard_data        = json.loads(response.text)
-            position_result         = modify_data(leaderboard_data)
+            response_nickname       = get_nickname(headers, json_data)
+            response                = get_position(headers, json_data)
+            if response is not None and response_nickname is not None:
+                nickname            = json.loads(response_nickname.text)['data']['nickName']
+                leaderboard_data    = json.loads(response.text)
+                position_result     = modify_data(leaderboard_data)
 
-            new_symbols             = position_result.index.difference(previous_symbols.get(TARGETED_ACCOUNT_UID, pd.Index([])))
-            if not is_first_runs[TARGETED_ACCOUNT_UID] and not new_symbols.empty:
-                for symbol in new_symbols:
-                    send_new_position_message(symbol, position_result.loc[symbol], nickname)
+                new_symbols         = position_result.index.difference(previous_symbols.get(TARGETED_ACCOUNT_UID, pd.Index([])))
+                if not is_first_runs[TARGETED_ACCOUNT_UID] and not new_symbols.empty:
+                    for symbol in new_symbols:
+                        send_new_position_message(symbol, position_result.loc[symbol], nickname)
 
-            closed_symbols          = previous_symbols.get(TARGETED_ACCOUNT_UID, pd.Index([])).difference(position_result.index)
-            if not is_first_runs[TARGETED_ACCOUNT_UID] and not closed_symbols.empty:
-                for symbol in closed_symbols:
-                    if symbol in previous_position_results.get(TARGETED_ACCOUNT_UID, pd.DataFrame()).index:
-                        send_closed_position_message(symbol, previous_position_results[TARGETED_ACCOUNT_UID].loc[symbol], nickname)
+                closed_symbols      = previous_symbols.get(TARGETED_ACCOUNT_UID, pd.Index([])).difference(position_result.index)
+                if not is_first_runs[TARGETED_ACCOUNT_UID] and not closed_symbols.empty:
+                    for symbol in closed_symbols:
+                        if symbol in previous_position_results.get(TARGETED_ACCOUNT_UID, pd.DataFrame()).index:
+                            send_closed_position_message(symbol, previous_position_results[TARGETED_ACCOUNT_UID].loc[symbol], nickname)
 
-            if is_first_runs[TARGETED_ACCOUNT_UID]:
-                send_current_positions(position_result, nickname)
+                if is_first_runs[TARGETED_ACCOUNT_UID]:
+                    send_current_positions(position_result, nickname)
 
-            previous_position_results[TARGETED_ACCOUNT_UID] = position_result.copy()
-            previous_symbols[TARGETED_ACCOUNT_UID] = position_result.index.copy()
-            is_first_runs[TARGETED_ACCOUNT_UID] = False
-            
-    time.sleep(300)
+                previous_position_results[TARGETED_ACCOUNT_UID] = position_result.copy()
+                previous_symbols[TARGETED_ACCOUNT_UID] = position_result.index.copy()
+                is_first_runs[TARGETED_ACCOUNT_UID] = False
+                
+        time.sleep(300)
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        message                     = f"Error occurred for UID <b>{TARGETED_ACCOUNT_UID}</b>:\n{e}\n\n" \
+                                      f"Retrying after 60s"
+        telegram_send_message(message)
+        time.sleep(60)
